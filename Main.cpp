@@ -15,6 +15,36 @@ const int SCREEN_HEIGHT = 768;
 const int SCREEN_FPS = 60;
 const int SCREEN_TICK_PER_FRAME = 1000 / SCREEN_FPS;
 
+// declaration forward
+static void getInfo(void);
+
+
+static void getInfo(void)
+{
+    SDL_version compiled;
+    SDL_version linked;
+    SDL_VERSION(&compiled);
+    SDL_GetVersion(&linked);
+
+    fprintf(stdout, "We compiled against SDL version %d.%d.%d ...\n",compiled.major, compiled.minor, compiled.patch);
+    fprintf(stdout, "And we are linking against SDL version %d.%d.%d.\n", linked.major, linked.minor, linked.patch);
+
+    std::cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl;
+    std::cout << "GLSL version: " 
+              << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+    std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
+    std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
+}
+
+
+// comment me if not Linux or old hardware
+#define IS_LINUX_AND_YOUR_HARDWARE_CAN_DO_IT
+
+#ifdef IS_LINUX_AND_YOUR_HARDWARE_CAN_DO_IT
+const char* env_var = "MESA_GL_VERSION_OVERRIDE=4.5";
+const char* env_var2 = "MESA_GLSL_VERSION_OVERRIDE=450";
+#endif
+
 const char* SetupImGui()
 {
     // Decide GL+GLSL versions
@@ -26,12 +56,24 @@ const char* SetupImGui()
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 #else
+    #ifdef IS_LINUX_AND_YOUR_HARDWARE_CAN_DO_IT
+    // GL 4.5 + GLSL 450, adapt to your case
+    putenv((char*)env_var);
+    putenv((char*)env_var2);
+
+    const char* glsl_version = "#version 450";
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
+    #else
     // GL 3.0 + GLSL 130
     const char* glsl_version = "#version 130";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    #endif
 #endif
 
     // Create window with graphics context
@@ -53,7 +95,7 @@ int main(int, char**)
         return 1;
     }
 
-    gWindow = SDL_CreateWindow( "ImGui Mix with SDL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
+    gWindow = SDL_CreateWindow( "ImGui Mix with SDL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL| SDL_WINDOW_RESIZABLE);
     if(gWindow == NULL)
     {
         printf( "Window could not be created! %s\n", SDL_GetError() );
@@ -104,6 +146,8 @@ int main(int, char**)
     int startTicks = SDL_GetTicks();
     //Start counting frames per second
     int countedFrames = 0;
+
+    getInfo();
 
     while (true)
     {
